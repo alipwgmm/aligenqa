@@ -1,0 +1,68 @@
+#!/usr/bin/python2
+"""
+Run generator-level QA for ALICE based on output from LEGO trains
+"""
+
+import argparse
+import os
+import re
+import sys
+
+from rootpy import log, ROOT
+
+from aligenqa import *
+from aligenqa import settings
+
+log = log["/aligenqa"]
+
+# command line parsing
+class formatter_class(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.RawTextHelpFormatter):
+    pass
+    
+parser = argparse.ArgumentParser(formatter_class=formatter_class)
+parser.add_argument('-v', '--verbose', action='store_true', default=False)
+subparsers = parser.add_subparsers()
+
+parser_prepare = subparsers.add_parser('prepare', description=prepare.__doc__)
+parser_prepare.add_argument('input_file', type=str, help="Path to file containing the input data")
+parser_prepare.set_defaults(op=prepare)
+
+parser_download = subparsers.add_parser('download', description=download.__doc__)
+parser_download.add_argument('input_file', type=str, help="Path to file containing the input data")
+parser_download.set_defaults(op=download)
+
+parser_plot = subparsers.add_parser('plot', description=plot.__doc__)
+parser_plot.add_argument('local_path', type=str, help="Path to file containing the input data")
+parser_plot.set_defaults(op=plot)
+
+parser_summarize = subparsers.add_parser('summarize', description=summarize.__doc__)
+parser_summarize.add_argument('input_file', type=str, help="Path to file containing the input data")
+parser_summarize.add_argument('--gen_name', type=str,
+                              help="Name of the generator and tune. If not given, deduced from filename")
+parser_summarize.set_defaults(op=summarize)
+
+parser_compare = subparsers.add_parser('compare', description=compare.__doc__)
+parser_compare.add_argument("input_file1", type=str, help="Path to the first file to be compared")
+parser_compare.add_argument("trigger1", type=str, help="Trigger of interest in first file",
+                            choices=settings.considered_triggers)
+parser_compare.add_argument("--generator_name1", type=str, help="Overwrite name and tune of first generator.")
+parser_compare.add_argument("input_file2", type=str, help="Path to the second file to be compared")
+parser_compare.add_argument("trigger2", type=str, help="Trigger of interest in second file",
+                            choices=settings.considered_triggers)
+parser_compare.add_argument("--generator_name2", type=str, help="Overwrite name and tune of second generator")
+parser_compare.set_defaults(op=compare)
+
+args = parser.parse_args()
+
+try:
+    args.op(args)
+except KeyboardInterrupt:
+    sys.exit(1)
+except Exception as e:
+    if args.verbose:
+        # re-raise with the full traceback
+        t, v, tb = sys.exc_info()
+        raise t, v, tb
+    else:
+        sys.exit("{0}: {1}".format(e.__class__.__name__, e))
