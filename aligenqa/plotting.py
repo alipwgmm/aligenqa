@@ -62,15 +62,15 @@ class Plotting(object):
 
     def _io_decorator(func):
         """
-        Open and close the file befor and after the execution of the decorated function.
-        The purpose ist to clean up memory in this way and to force an update of the file
+        Open and close the file before and after the execution of the decorated function.
+        The purpose is to clean up memory in this way and to force an update of the file
         before the next function calls. The wrapper adds the file, sums and results_post to `self`.
         """
         def wrapper(self, **kwargs):
-            with root_open(self.f_name, 'update') as self.f:
-                self.sums = self.f.MultEstimators.__getattr__(self.sums_dir_name)
+            with root_open(self.f_name, 'read') as self.f_in, root_open(self.f_name.replace(".root", "_out.root"), 'update') as self.f_out:
+                self.sums = self.f_in.MultEstimators.__getattr__(self.sums_dir_name)
                 try:
-                    self.results_post = self.f.MultEstimators.__getattr__(self.results_dir_name)
+                    self.results_post = self.f_out.MultEstimators.__getattr__(self.results_dir_name)
                 except AttributeError:
                     # results dir does not exists (yet)
                     pass
@@ -109,15 +109,18 @@ class Plotting(object):
     @_io_decorator
     def delete_results_dir(self):
         # delete old result directory
-        self.f.rm('MultEstimators/' + self.results_dir_name)
-        self.f.Write()
+        try:
+            self.f_out.rm('MultEstimators/' + self.results_dir_name)
+            self.f_out.Write()
+        except:
+            pass
 
     @_io_decorator
     def make_results_dir(self):
-        self.f.mkdir('MultEstimators/' + self.results_dir_name, recurse=True)
+        self.f_out.mkdir('MultEstimators/' + self.results_dir_name, recurse=True)
         for est_dir in get_est_dirs(self.sums, self.considered_ests):
             try:
-                resdir = self.f.MultEstimators.__getattr__(self.results_dir_name).mkdir(est_dir.GetName())
+                resdir = self.f_out.MultEstimators.__getattr__(self.results_dir_name).mkdir(est_dir.GetName())
                 resdir.Write()
             except:
                 pass
@@ -147,7 +150,7 @@ class Plotting(object):
                 ratio1d.Scale(scale)
                 fig.add_plottable(ratio1d, legend_title=make_estimator_title(est_dir.GetName()))
                 name = "_".join(pids1) + "_div_" + "_".join(pids2)
-                fig.save_to_root_file(self.f, name, ratio_vs_estmult_dir)
+                fig.save_to_root_file(self.f_out, name, ratio_vs_estmult_dir)
 
     @_io_decorator
     def plot_event_counters(self):
@@ -159,7 +162,7 @@ class Plotting(object):
             counter = asrootpy(corr.ProjectionX())
             counter.name = "event_counter"
             path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
-            self.f.cd(path)
+            self.f_out.cd(path)
             results_est_dir.WriteTObject(counter)
 
     @_io_decorator
@@ -198,9 +201,9 @@ class Plotting(object):
                 fig.add_plottable(dNdeta_mb, legend_title=title)
             path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
             if ratio_to_mb:
-                fig.save_to_root_file(self.f, "dNdeta_MB_ratio_summary", path=path)
+                fig.save_to_root_file(self.f_out, "dNdeta_MB_ratio_summary", path=path)
             else:
-                fig.save_to_root_file(self.f, "dNdeta_summary", path=path)
+                fig.save_to_root_file(self.f_out, "dNdeta_summary", path=path)
             figs.append(fig)
         return figs
 
@@ -270,7 +273,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -283,7 +286,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -296,7 +299,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             # Ratios to pi0
@@ -310,7 +313,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['pi_ch'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -323,7 +326,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -336,7 +339,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['k0s'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -349,7 +352,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -362,7 +365,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -375,7 +378,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             # Ratios to K0S
@@ -389,7 +392,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -402,7 +405,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -415,7 +418,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -428,7 +431,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
             fig = get_new_figure()
@@ -441,7 +444,7 @@ class Plotting(object):
                 fig.add_plottable(h1 / h2, legend_title=title)
                 for h1, h2, title in zip(mult_binned_pt_dists['k_ch'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
-            fig.save_to_root_file(self.f, name, dirname)
+            fig.save_to_root_file(self.f_out, name, dirname)
             figs.append(fig)
 
         return figs
@@ -463,7 +466,7 @@ class Plotting(object):
                 summary_fig.add_plottable(h_tmp, make_estimator_title(est_name))
 
         path = self.results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
-        summary_fig.save_to_root_file(self.f, "PNch_summary", path=path)
+        summary_fig.save_to_root_file(self.f_out, "PNch_summary", path=path)
         # list as return type is expected for making the pdf
         return [summary_fig]
 
@@ -538,9 +541,9 @@ class Plotting(object):
 
                 path = res_est_dir.GetPath().split(":")[1]
                 # vs est_mult
-                fig_vs_estmult.save_to_root_file(self.f, "PNchEst_binned_in_Nch{0}".format(ref_est_name), path)
+                fig_vs_estmult.save_to_root_file(self.f_out, "PNchEst_binned_in_Nch{0}".format(ref_est_name), path)
                 # vs est_mult
-                fig_vs_refmult.save_to_root_file(self.f, "PNch{0}_binned_in_NchEst".format(ref_est_name), path)
+                fig_vs_refmult.save_to_root_file(self.f_out, "PNch{0}_binned_in_NchEst".format(ref_est_name), path)
                 figs.append(fig_vs_estmult)
                 figs.append(fig_vs_refmult)
         return figs
@@ -553,10 +556,10 @@ class Plotting(object):
                     + "/" + est_dir.GetName()
                     + "/mult_pt")
             try:
-                self.f.mkdir(path, recurse=True)
+                self.f_out.mkdir(path, recurse=True)
             except ValueError:
                 pass
-            self.f.cd(path)
+            self.f_out.cd(path)
 
             h3d = asrootpy(est_dir.FindObject('classifier_pT_PID_{0}'.format(est_dir.GetName())))
             # loop through all particle kinds:
@@ -573,7 +576,7 @@ class Plotting(object):
         log.info("Correlating N_ch of each estimator")
         corr_dir = self.results_post.GetPath().split(":")[1] + '/correlations'
         try:
-            self.f.mkdir(corr_dir, recurse=True)
+            self.f_out.mkdir(corr_dir, recurse=True)
         except:
             pass
         # Take ntuple from the first estimator and then add friends to this one
@@ -597,7 +600,7 @@ class Plotting(object):
                 nt0.Project(corr_hist.name, "{0}.nch:{1}.nch".format(ref_est, est_dir.GetName()),
                             "ev_weight")
                 corr_hist.drawstyle = 'colz'
-                self.f.cd(corr_dir)
+                self.f_out.cd(corr_dir)
                 corr_hist.write()
 
     @_io_decorator
@@ -622,7 +625,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2, )
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # K / pi_ch
@@ -633,7 +636,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Lambda / pi_ch
@@ -644,7 +647,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Xi / pi_ch
@@ -655,7 +658,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Omega / pi_ch
@@ -666,7 +669,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # pi_ch/pi0
@@ -677,7 +680,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # proton / pi0
@@ -689,7 +692,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # K / pi0
@@ -701,7 +704,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Lambda / pi0
@@ -712,7 +715,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Xi / pi0
@@ -724,7 +727,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # Omega / pi0
@@ -736,7 +739,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # K_ch / K0_S
@@ -748,7 +751,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2, scale=.5)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # K0_S / Lambda
@@ -759,7 +762,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         # K0_S / Xi
@@ -770,7 +773,7 @@ class Plotting(object):
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
-        fig.save_to_root_file(self.f, name, ratios_dir)
+        fig.save_to_root_file(self.f_out, name, ratios_dir)
         figs.append(fig)
 
         return figs
@@ -825,7 +828,7 @@ class Plotting(object):
             fig.xtitle = "N_{ch}|_{|#eta|<0.5}"
             fig.legend.title = make_estimator_title(sums_est_dir.GetName())
             [fig.add_plottable(g, g.title) for g in graphs]
-            fig.save_to_root_file(self.f, "mean_pt", res_dir_str)
+            fig.save_to_root_file(self.f_out, "mean_pt", res_dir_str)
             figs.append(fig)
         return figs
 
@@ -907,7 +910,7 @@ class Plotting(object):
             [h.Scale(1, "width") for h in hists]
 
             [fig.add_plottable(p, p.title) for p in hists]
-            fig.save_to_root_file(self.f, "dN{0}dpT".format(pid_selection), res_dir_str)
+            fig.save_to_root_file(self.f_out, "dN{0}dpT".format(pid_selection), res_dir_str)
             figs.append(fig)
         return figs
 
@@ -953,7 +956,7 @@ class Plotting(object):
                 else:
                     fig.add_plottable((pt_dist_in_interval / pt_dist_mb), title)
                     name = "pt_hm_div_pt_mb"
-            fig.save_to_root_file(self.f, name, res_dir_str)
+            fig.save_to_root_file(self.f_out, name, res_dir_str)
             figs.append(fig)
         return figs
 
@@ -973,5 +976,5 @@ class Plotting(object):
             summary_fig.add_plottable(h_tmp, make_estimator_title(est_dir.GetName()))
 
         path = self.results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
-        summary_fig.save_to_root_file(self.f, "nMPI_summary", path=path)
+        summary_fig.save_to_root_file(self.f_out, "nMPI_summary", path=path)
         return [summary_fig]

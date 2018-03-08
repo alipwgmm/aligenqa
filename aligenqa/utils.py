@@ -60,21 +60,16 @@ def remap_x_values(hist, corr_hist):
 
 
 def remove_zero_value_points(g):
-    # Remove the points backwards, since the index would change if we do it forwards
-    # The first point has index 0!
-    points_to_remove = []
-    for i, (x, y) in enumerate(g):
-        if not y > 0.0:
-            points_to_remove.append(i)
-    for p in points_to_remove[::-1]:
-        g.RemovePoint(p)
-
+    for p in reversed(g):
+        if not p.y > 0.:
+            g.RemovePoint(p)
 
 def remove_points_with_equal_x(g):
     """Remove all points which are on already occupied x values. Ie. The first point is kept, all later ones removed"""
     points_to_remove = []
     seen_x = []
-    for i, (x, y) in enumerate(g):
+    for i, p in enumerate(g):
+        x = p.x
         if x in seen_x:
             points_to_remove.append(i)
         else:
@@ -97,8 +92,8 @@ def remove_non_mutual_points(g1, g2):
     """Remove all points with do no have a corresponding point at the same x-value in the other hist"""
     points_to_remove1 = []
     points_to_remove2 = []
-    xs1 = [p[0] for p in g1]
-    xs2 = [p[0] for p in g2]
+    xs1 = [p.x for p in g1]
+    xs2 = [p.x for p in g2]
     for i, x in enumerate(xs1):
         if x not in xs2:
             points_to_remove1.append(i)
