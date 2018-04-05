@@ -9,7 +9,7 @@ setup(
     description="Provides tools for post-processing of MC multiplicity estimator studies",
     author='Christian Bourjau',
     author_email='christian.bourjau@cern.ch',
-    packages=['aligenqa', 'roofie'],
+    packages=['aligenqa'],
     long_description=open('README.md').read(),
     scripts=glob('scripts/*'),
     classifiers=[
